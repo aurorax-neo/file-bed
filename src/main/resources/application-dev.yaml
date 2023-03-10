@@ -1,0 +1,15 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    druid:
+      name: mariadb-01
+      url: jdbc:mariadb://localhost:3306/drawing_bed
+      username: root
+      password: root
+      testWhileIdle: true
+      validationQuery: SELECT 1
+mybatis-plus:
+  configuration:
+    # 日志
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+    <script src="http://apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/axios@1.1.2/dist/axios.min.js"></script>
+    <script type="text/javascript" src="/temp/upload/js/md5.js"></script>
+    <script type="text/javascript" src="/temp/upload/js/tool.js"></script>
+    <script type="text/javascript" src="/temp/upload/js/uploadFile.js"></script>
+</head>
+<body>
+<div align="center">
+    <div id="top" class="center">
+        <p id="message"></p>
+    </div>
+    <div id="upload" class="center">
+        <h1>文件分片上传</h1>
+        <input type="file" name="file" id="file" onchange="checkFile_()"/>
+        <input type="button" id="submit" onclick="uploadFile_()" value="submit"/>
+        <span id="output">等待中</span>
+    </div>
+    <span id="fileName">文件名:</span>
+    <br>
+    <span id="fileUrl">文件链接:</span>
+</div>
+</body>
+</html>

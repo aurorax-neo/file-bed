@@ -1,0 +1,192 @@
+// 控制文件分片和上传
+// 不要忘记控制前端的显示结果
+// 简单尝试直接使用串行
+
+let segmentIndex = 0;
+const segmentSize = 2 * 1024 * 1024;  // 先2MB用着
+
+
+const API = {
+    UPLOAD_SEGMENT_FILE: 'http://localhost:8080/api/upload/segmentFile',
+    UPLOAD_CHECK_FILE: 'http://localhost:8080/api/upload/checkFile'
+}
+
+// 文件key计算
+function getFileKey(file) {
+    //把文件的信息存储为一个字符串
+    const fileDetails = file.name + file.size + file.type + file['lastModifiedDate'];
+    //使用当前文件的信息用md5加密生成一个key
+    const key = hex_md5(fileDetails);
+    const key10 = parseInt(key, 16);
+    //把加密的信息 转为一个62位的
+    const key62 = Tool._10to62(key10);
+    // console.log("getFileKey:" + key62)
+    return key62;
+}
+
+// 得到分片数量
+// 注意分片序号从1开始
+function getTotalSegmentCount(file, segmentSize) {
+    const size = file.size;
+    const segmentTotal = Math.ceil(size / segmentSize);
+    return segmentTotal;
+}
+
+// 计算分片的开始和结束
+function getSegmentStartAndEnd(file, segmentIndex) {
+    const start = (segmentIndex - 1) * segmentSize;
+    const end = Math.min(start + segmentSize, file.size);
+    return [start, end];
+}
+
+// 检测当前文件是否存在，存在且完成上传则输出秒传信息
+// 存在但未完成，则将upload的segmentIndex修改，等待后续上传（把前端信息也修改一下）
+// 不存在则md5码(key)，等待后续上传（把前端信息也修改一下）
+async function checkFile() {
+    const file = $('#file').get(0).files[0];
+    const key = getFileKey(file)
+
+    // ajax请求找下数据库中该文件是否存在
+    $.ajax(API.UPLOAD_CHECK_FILE, {
+        type: 'post',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({
+            'key': key
+        }),
+        success: function (res) {
+            const data = res.data;
+
+            if (!data) {
+                $('#fileName').html('文件名:')
+                $('#output').html('该文件未上传')
+                return;
+            }
+            console.log(data)
+            const name = data['name'];
+            const fileUrl = data['url']
+            const segmentIndexNow = data['segmentIndex'];
+            const segmentTotal = data['segmentTotal'];
+            $('#fileName').html('文件名: ' + name)
+            if (segmentIndexNow === segmentTotal) {
+                // 完成上传
+                $('#output').html('该文件已上传')
+                $('#fileUrl').html('文件链接: ' + fileUrl)
+                return
+            }
+            $('#output').html(segmentIndexNow + '/' + segmentTotal)
+            segmentIndex = segmentIndexNow + 1
+        },
+        error: function (err) {
+            $('#output').html("check请求错误")
+            console.log("check请求错误" + err.data)
+        }
+    })
+}
+
+
+// 总的上传方法，中间递归上传分片
+function uploadFile() {
+    const file = $('#file').get(0).files[0];
+    const key = getFileKey(file)
+
+    // ajax请求找下数据库中该文件是否存在
+    $.ajax(API.UPLOAD_CHECK_FILE, {
+        type: 'post',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({
+            'key': key
+        }),
+        success: function (res) {
+            const data = res.data;
+            let segmentIndex = 0;
+            let segmentTotal = getTotalSegmentCount(file, segmentSize);
+
+            // 如果文件不存在 从头开始上传
+            if (!data) {
+                $('#output').html(segmentIndex + '/' + segmentTotal)
+                segmentIndex = segmentIndex + 1;
+                // 开始上传分片
+                uploadSegmentFile(file, segmentIndex, key)
+                return
+            }
+
+            // 如果存在
+            const fileName = data['name'];
+            $('#fileName').html('文件名: ' + fileName)
+            const fileUrl = data['url']
+            segmentIndex = data['segmentIndex'];
+            segmentTotal = data['segmentTotal'];
+
+            // 上传已完成
+            if (segmentIndex === segmentTotal) {
+                // 完成上传
+                $('#output').html('该文件已上传')
+                $('#fileUrl').html('文件链接: ' + fileUrl)
+                console.log(data)
+                return;
+            }
+
+            // 上传未完成 继续上传
+            $('#output').html(segmentIndex + '/' + segmentTotal)
+            segmentIndex = segmentIndex + 1;
+            // 开始上传分片
+            uploadSegmentFile(file, segmentIndex, key)
+        },
+        error: function () {
+            console.log("check请求错误")
+        }
+    })
+}
+
+
+// 上传分片
+function uploadSegmentFile(file, segmentIndex, key) {
+    const data = new FormData();
+    const sAe = getSegmentStartAndEnd(file, segmentIndex);
+    const segmentStart = sAe[0];
+    const segmentEnd = sAe[1];
+    const segmentFile = file.slice(segmentStart, segmentEnd);
+    const segmentTotal = getTotalSegmentCount(file, segmentSize);
+    const fileName = file.name;
+
+    data.append('segmentFile', segmentFile)
+    data.append('fileName', fileName)
+    data.append('fileSize', file.size)
+    data.append('segmentIndex', segmentIndex)
+    data.append('segmentSize', segmentSize.toString())
+    data.append('key', key)
+
+    $.ajax(API.UPLOAD_SEGMENT_FILE, {
+        type: 'post',
+        cache: false,
+        processData: false,
+        contentType: false,
+        data: data,
+        success: function (res) {
+            const data = res.data;
+            if (!data) {
+                $('#output').html(data)
+                return
+            }
+            const fileName = data['name'];
+            const fileUrl = data['url']
+            $('#fileName').html('文件名: ' + fileName)
+            // 递归调用
+            $('#output').html(segmentIndex + "/" + segmentTotal)
+            if (segmentIndex < segmentTotal)
+                uploadSegmentFile(file, segmentIndex + 1, key)
+            else if (segmentIndex === segmentTotal) {
+                // 完成上传
+                $('#output').html('上传完成')
+                $('#fileUrl').html('文件链接: ' + fileUrl)
+                console.log(data)
+            }
+        }, error: function () {
+            console.log("分片" + segmentIndex + "上传失败")
+        }
+    })
+}
