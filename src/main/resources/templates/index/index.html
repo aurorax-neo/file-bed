@@ -27,7 +27,7 @@
                     </el-button>
                     <div id="uploadTip" slot="tip" class="el-upload__tip">请选择上传文件</div>
                 </el-upload>
-                <div style="width: 275px;margin: 15px auto;">
+                <div style="width: 325px;margin: 15px auto;">
                     <el-progress :text-inside="true" :stroke-width="20" :percentage="percentage"></el-progress>
                 </div>
                 <el-table :data="tableData">
@@ -85,7 +85,7 @@
                     document.getElementById("uploadTip").innerText = "该文件未上传"
                     return;
                 }
-                this.$data.percentage = data['segmentIndex'] / data['segmentTotal'] * 100;
+                this.$data.percentage = Math.floor(data['segmentIndex'] / data['segmentTotal'] * 100);
                 if (this.$data.percentage < 100) {
                     document.getElementById("uploadTip").innerText = "该文件未上传完成,点击上传文件继续上传"
                     return;
@@ -104,7 +104,7 @@
             },
             async uploadFile(value) {
                 await uploadFile(value.file, (err, data) => {
-                    this.$data.percentage = data['segmentIndex'] / data['segmentTotal'] * 100;
+                    this.$data.percentage = Math.floor(data['segmentIndex'] / data['segmentTotal'] * 100);
                 });
             },
             copyFileUrl(row) {
