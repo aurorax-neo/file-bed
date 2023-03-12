@@ -41,8 +41,8 @@ public class CustomFileUploadController {
         CustomFileVO customFileVO = new CustomFileVO();
         BeanUtils.copyProperties(customFile, customFileVO);
         if (Objects.equals(customFile.getSegmentIndex(), customFile.getSegmentTotal())) {
-            String url = FileUtil.getFileUrl(httpServletRequest, customFile.getCustomKey());
-            customFileVO.setUrl(url);
+            String fileUrl = FileUtil.getFileUrl(httpServletRequest, customFile.getFileKey());
+            customFileVO.setFileUrl(fileUrl);
         }
         return ResultUtils.success(customFileVO);
     }
@@ -50,13 +50,13 @@ public class CustomFileUploadController {
     @RequestMapping("/segmentFile")
     public BaseResponse<CustomFileVO> uploadFile(HttpServletRequest httpServletRequest,
                                                  CustomFileUploadSegmentFileRequest request) {
-        CustomFile customFile = customFileService.upLoadSegmentFile(
+        CustomFile customFile = customFileService.upLoadCustomFile(
                 httpServletRequest,
-                request.getSegmentFile(),
                 request.getFileName(),
-                request.getFileSize(),
+                request.getSegmentFile(),
                 request.getSegmentIndex(),
                 request.getSegmentSize(),
+                request.getSegmentTotal(),
                 request.getKey());
         return getCustomFileVOBaseResponse(httpServletRequest, customFile);
     }
@@ -65,7 +65,7 @@ public class CustomFileUploadController {
     // 检查文件是否已经存在，且返回CustomFile信息
     public BaseResponse<CustomFileVO> checkFile(HttpServletRequest httpServletRequest,
                                                 @RequestBody CustomFileUploadCheckFileRequest request) {
-        CustomFile customFile = customFileService.getSegmentFileByKey(request.getKey());
+        CustomFile customFile = customFileService.getCustomFileByKey(request.getKey());
         if (customFile == null) {
             throw new BusinessException(StateCode.NOT_FOUND_ERROR, "该文件未上传");
         }

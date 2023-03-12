@@ -23,8 +23,8 @@ public class FileUtil {
         return path.concat(File.separator);
     }
 
-    public static String getFileNameWithSuffix(String fileName, String suffix) {
-        return fileName + "." + suffix;
+    public static String getFileNameWithSuffix(String name, String suffix) {
+        return name + "." + suffix;
     }
 
     public static String getFileNameWithoutSuffix(String fullFileName) {
@@ -41,14 +41,16 @@ public class FileUtil {
         return fileName.substring(suffixIndex + 1);
     }
 
-    public static String getSegmentName(String fullFileName, int segmentIndex) {
-        return fullFileName + "#" + segmentIndex;
+    public static String getSegmentName(String fileName, String reName, int segmentIndex) {
+        String suffix = FileUtil.getFileSuffix(fileName);
+        String reFileName = FileUtil.getFileNameWithSuffix(reName, suffix);
+        return reFileName.concat("#") + segmentIndex;
     }
 
     public static String getUUIDFileNameWithSuffix(String fullFileName) {
         String suffix = getFileSuffix(fullFileName);
         String name = UUID.randomUUID().toString();
-        return name + "." + suffix;
+        return name.concat(".").concat(suffix);
     }
 
     public static String getFileUrl(HttpServletRequest httpServletRequest, String key) {

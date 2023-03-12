@@ -17,17 +17,18 @@ public interface CustomFileService extends IService<CustomFile> {
 
 
     /**
-     * 分片上传文件
+     * 加载自定义文件
      *
-     * @param segmentFile    部分文件
-     * @param fileName 源文件名称
-     * @param fileSize       文件大小
-     * @param segmentIndex   段指数
-     * @param segmentSize    段大小
-     * @param key            md5关键
+     * @param httpServletRequest http servlet请求
+     * @param fileName           文件名称
+     * @param segmentFile        部分文件
+     * @param segmentIndex       段指数
+     * @param segmentSize        段大小
+     * @param segmentTotal       段总
+     * @param key                关键
      * @return {@link CustomFile}
      */
-    CustomFile upLoadSegmentFile(HttpServletRequest httpServletRequest, MultipartFile segmentFile, String fileName, Long fileSize, Integer segmentIndex, Long segmentSize, String key);
+    CustomFile upLoadCustomFile(HttpServletRequest httpServletRequest, String fileName, MultipartFile segmentFile, Integer segmentIndex, Long segmentSize, Integer segmentTotal, String key);
 
     /**
      * 检查文件
@@ -36,5 +37,5 @@ public interface CustomFileService extends IService<CustomFile> {
      * @param key md5关键
      * @return {@link CustomFile}
      */
-    CustomFile getSegmentFileByKey(String key);
+    CustomFile getCustomFileByKey(String key);
 }

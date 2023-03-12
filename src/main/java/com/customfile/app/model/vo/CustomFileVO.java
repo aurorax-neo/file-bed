@@ -25,10 +25,9 @@ public class CustomFileVO implements Serializable {
     private static final long serialVersionUID = -1145039356017772808L;
 
     private Long id;
-    private String name;
-    private String suffix;
-    private Long size;
-    private String url;
+    private String fileName;
+    private Long fileSize;
+    private String fileUrl;
     private Integer segmentIndex;
     private Long segmentSize;
     private Integer segmentTotal;

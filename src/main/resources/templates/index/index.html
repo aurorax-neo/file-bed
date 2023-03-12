@@ -18,11 +18,10 @@
                         :on-preview="handlePreview"
                         :on-remove="handleRemove"
                         :before-remove="beforeRemove"
-                        :on-change="onChange"
                         :auto-upload="false"
                         :limit="1">
                     <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
-                    <el-button :disabled="submitUploadBtnState" style="margin-left: 10px;" size="small" type="success"
+                    <el-button style="margin-left: 10px;" size="small" type="success"
                                @click="submitUpload">上传文件
                     </el-button>
                     <div id="uploadTip" slot="tip" class="el-upload__tip">请选择上传文件</div>
@@ -54,74 +53,7 @@
 <script type="text/javascript" src="/index/js/md5.js"></script>
 <script type="text/javascript" src="/index/js/tool.js"></script>
 <script type="text/javascript" src="/index/js/uploadFile.js"></script>
-<script>
-    new Vue({
-        el: '#app',
-        data: () => {
-            return {
-                submitUploadBtnState: false,
-                tableData: [],
-                percentage: 0
-            }
-        },
-        methods: {
-            handleRemove(file) {
-                this.$data.submitUploadBtnState = false;
-                document.getElementById("uploadTip").innerText = "请选择上传文件"
-                this.$data.tableData = []
-                console.log('删除选择文件', file);
-            },
-            handlePreview(file) {
-                console.log('预览选择文件', file);
-            },
-            beforeRemove(file) {
-                return this.$confirm(`确定移除 ${file.name}？`);
-            },
-            async onChange(file) {
-                this.$data.submitUploadBtnState = false;
-                const data = await checkFile(file.raw);
-                if (!data) {
-                    this.$data.percentage = 0
-                    document.getElementById("uploadTip").innerText = "该文件未上传"
-                    return;
-                }
-                this.$data.percentage = Math.floor(data['segmentIndex'] / data['segmentTotal'] * 100);
-                if (this.$data.percentage < 100) {
-                    document.getElementById("uploadTip").innerText = "该文件未上传完成,点击上传文件继续上传"
-                    return;
-                }
-                document.getElementById("uploadTip").innerText = "该文件已上传"
-                this.$data.submitUploadBtnState = true;
-                const temp = {
-                    fileName: data['name'] + '.' + data['suffix'],
-                    fileUrl: data['url'],
-                }
-                this.$data.tableData.push(temp);
-            },
-            async submitUpload() {
-                this.$data.submitUploadBtnState = true;
-                this.$refs.upload.submit()
-            },
-            async uploadFile(value) {
-                await uploadFile(value.file, (err, data) => {
-                    this.$data.percentage = Math.floor(data['segmentIndex'] / data['segmentTotal'] * 100);
-                });
-            },
-            copyFileUrl(row) {
-                const oInput = document.createElement('input');
-                oInput.value = row['fileUrl'];
-                document.body.appendChild(oInput);
-                oInput.select(); // 选择对象;
-                document.execCommand("Copy"); // 执行浏览器复制命令
-                oInput.remove()
-                this.$message({
-                    message: '复制成功',
-                    type: 'success'
-                });
-            }
-        },
-    })
-</script>
+<script type="text/javascript" src="/index/js/index.js"></script>
 <style>
 </style>
 </html>

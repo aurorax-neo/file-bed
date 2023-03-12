@@ -1,8 +1,10 @@
 package com.customfile.app.controller;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.customfile.app.common.constant.ApiMapping;
 import com.customfile.app.common.exception.BusinessException;
 import com.customfile.app.common.response.StateCode;
+import com.customfile.app.mapper.CustomFileMapper;
 import com.customfile.app.model.entity.CustomFile;
 import com.customfile.app.service.CustomFileService;
 import org.apache.commons.lang3.StringUtils;
@@ -35,23 +37,28 @@ public class CustomFileDownloadController {
     @Resource
     private CustomFileService customFileService;
 
+    @Resource
+    private CustomFileMapper customFileMapper;
+
     @GetMapping("/{key}")
     public ResponseEntity<FileSystemResource> sendFile(HttpServletRequest request, @PathVariable String key) {
-        CustomFile customFile = customFileService.getSegmentFileByKey(key);
+        CustomFile customFile = customFileService.getCustomFileByKey(key);
 
         if (customFile == null) {
             throw new BusinessException(StateCode.NOT_FOUND_ERROR);
         }
 
-        File returnFile = new File(customFile.getPath());
+        File returnFile = new File(customFile.getFilePath());
         if (!returnFile.exists()) {
-            throw new BusinessException(StateCode.NOT_FOUND_ERROR, "请求文件丢失");
+            LambdaUpdateWrapper<CustomFile> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.set(true, CustomFile::getSegmentIndex, 0)
+                    .eq(key != null, CustomFile::getFileKey, key);
+            customFileMapper.update(new CustomFile(), updateWrapper);
+            throw new BusinessException(StateCode.NOT_FOUND_ERROR, "请求文件丢失,请重新上传");
         }
 
-
-        String fileName = customFile.getName();
-        String fileSuffix = customFile.getSuffix();
-        fileName = fileSuffix != null ? fileName.concat(".").concat(fileSuffix) : fileName;
+        // 文件名
+        String fileName = customFile.getFileName();
         String userAgent = request.getHeader("USER-AGENT");//获取浏览器版本
         if (StringUtils.contains(userAgent, "MSIE")) {//IE浏览器
             fileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);

@@ -30,15 +30,14 @@ public class CustomFile implements Serializable {
 
     @TableId
     private Long id;
-    private String name;
-    private String suffix;
-    private Long size;
-    private String path;
+    private String fileName;
+    private Long fileSize;
+    private String filePath;
     private Integer segmentIndex;
     private Long segmentSize;
     private Integer segmentTotal;
     private Date uploadDate;
-    private String customKey;
+    private String fileKey;
     @TableLogic
     private Integer isDelete;
 }

@@ -34,7 +34,7 @@ function getSegmentStartAndEnd(file, segmentIndex, segmentSize) {
 
 // 检测当前文件是否存在，存在且完成上传则输出秒传信息
 // 存在但未完成，则将upload的segmentIndex修改，等待后续上传（把前端信息也修改一下）
-// 不存在则md5码(key)，等待后续上传（把前端信息也修改一下）
+// 不存在则(key)，等待后续上传（把前端信息也修改一下）
 async function checkFile(file) {
     const key = getFileKey(file)
     // axios请求找下数据库中该文件是否存在
@@ -55,7 +55,7 @@ async function uploadFile(file, callback) {
     const key = getFileKey(file)
 
     // axios请求找下数据库中该文件是否存在
-    const data = await checkFile(file);
+    let data = await checkFile(file);
     // 分片大小
     const segmentSize = 2 * 1024 * 1024;  // 先2MB用着
     // 默认分片索引为1
@@ -78,6 +78,9 @@ async function uploadFile(file, callback) {
     for (let i = segmentIndex; i < segmentTotal; i++) {
         const data = await uploadSegmentFile(file, i + 1, segmentTotal, segmentSize, key);
         callback(null, data);
+        if (!data) {
+            break;
+        }
     }
 }
 
@@ -87,9 +90,8 @@ async function uploadSegmentFile(file, segmentIndex, segmentTotal, segmentSize, 
     const formData = new FormData();
     const sAe = getSegmentStartAndEnd(file, segmentIndex, segmentSize);
     const segmentFile = file.slice(sAe[0], sAe[1]);
-    formData.append('segmentFile', segmentFile)
     formData.append('fileName', file.name)
-    formData.append('fileSize', file.size)
+    formData.append('segmentFile', segmentFile)
     formData.append('segmentIndex', segmentIndex)
     formData.append('segmentSize', segmentSize)
     formData.append('segmentTotal', segmentTotal)
