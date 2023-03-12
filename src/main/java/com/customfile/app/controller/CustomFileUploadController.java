@@ -53,11 +53,13 @@ public class CustomFileUploadController {
         CustomFile customFile = customFileService.upLoadCustomFile(
                 httpServletRequest,
                 request.getFileName(),
+                request.getFileSize(),
                 request.getSegmentFile(),
                 request.getSegmentIndex(),
                 request.getSegmentSize(),
                 request.getSegmentTotal(),
-                request.getKey());
+                request.getKey(),
+                request.getMD5());
         return getCustomFileVOBaseResponse(httpServletRequest, customFile);
     }
 

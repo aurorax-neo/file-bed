@@ -25,10 +25,10 @@ public interface CustomFileService extends IService<CustomFile> {
      * @param segmentIndex       段指数
      * @param segmentSize        段大小
      * @param segmentTotal       段总
-     * @param key                关键
+     * @param fileKey                关键
      * @return {@link CustomFile}
      */
-    CustomFile upLoadCustomFile(HttpServletRequest httpServletRequest, String fileName, MultipartFile segmentFile, Integer segmentIndex, Long segmentSize, Integer segmentTotal, String key);
+    CustomFile upLoadCustomFile(HttpServletRequest httpServletRequest, String fileName,Long fileSize, MultipartFile segmentFile, Integer segmentIndex, Long segmentSize, Integer segmentTotal, String fileKey, String fileMD5);
 
     /**
      * 检查文件

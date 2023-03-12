@@ -7,7 +7,11 @@ const API = {
     UPLOAD_CHECK_FILE: '/api/upload/checkFile'
 }
 
-// 文件key计算
+/**
+ * 文件key计算
+ * @param file
+ * @returns {string}
+ */
 function getFileKey(file) {
     //把文件的信息存储为一个字符串
     const fileDetails = file.name + file.size + file.type + file['lastModifiedDate'];
@@ -16,6 +20,22 @@ function getFileKey(file) {
     const key10 = parseInt(key, 16);
     //把加密的信息 转为一个62位的
     return Tool._10to62(key10);
+}
+
+function calculateMD5(file) {
+    let blobSlice = File.prototype['mozSlice'] || File.prototype['webkitSlice'] || File.prototype.slice;
+    let chunkSize = 2097152;
+    // read in chunks of 2MB
+    let chunks = Math.ceil(file.size / chunkSize);
+    let currentChunk = 0;
+    let spark = new SparkMD5();
+    while (currentChunk++ < chunks) {
+        let start = currentChunk * chunkSize;
+        let end = start + chunkSize >= file.size ? file.size : start + chunkSize;
+        let blob = blobSlice.call(file, start, end);
+        spark.appendBinary(blob);
+    }
+    return spark.end();
 }
 
 // 得到分片数量
@@ -50,8 +70,11 @@ async function checkFile(file) {
     return res.data.data;
 }
 
-// 总的上传方法，中间递归上传分片
+// 总的上传方法，中间循环上传分片
 async function uploadFile(file, callback) {
+    // 计算MD5为了实现秒传功能
+    const md5 = calculateMD5(file);
+
     const key = getFileKey(file)
 
     // axios请求找下数据库中该文件是否存在
@@ -75,27 +98,37 @@ async function uploadFile(file, callback) {
     }
 
     // 如果上传未完成，继续上传
-    for (let i = segmentIndex; i < segmentTotal; i++) {
-        const data = await uploadSegmentFile(file, i + 1, segmentTotal, segmentSize, key);
+    let index = segmentIndex;
+    // 断点续传索引处理
+    if (index !== 0) {
+        index += 1;
+    }
+    while (index <= segmentTotal) {
+        const data = await uploadSegmentFile(file, file.name, file.size, index, segmentTotal, segmentSize, key, md5);
+        index = data['segmentIndex'] + 1;
         callback(null, data);
         if (!data) {
-            break;
+            return;
         }
     }
+
 }
 
 
 // 上传分片
-async function uploadSegmentFile(file, segmentIndex, segmentTotal, segmentSize, key) {
+async function uploadSegmentFile(file, fileName, fileSize, segmentIndex, segmentTotal, segmentSize, key, md5) {
     const formData = new FormData();
     const sAe = getSegmentStartAndEnd(file, segmentIndex, segmentSize);
     const segmentFile = file.slice(sAe[0], sAe[1]);
-    formData.append('fileName', file.name)
+
+    formData.append('fileName', fileName)
+    formData.append('fileSize', fileSize)
     formData.append('segmentFile', segmentFile)
     formData.append('segmentIndex', segmentIndex)
     formData.append('segmentSize', segmentSize)
     formData.append('segmentTotal', segmentTotal)
     formData.append('key', key)
+    formData.append('MD5', md5)
 
     const res = await axios(API.UPLOAD_SEGMENT_FILE, {
         method: 'POST',

@@ -19,6 +19,7 @@
                         :on-remove="handleRemove"
                         :before-remove="beforeRemove"
                         :auto-upload="false"
+                        :show-file-list="true"
                         :limit="1">
                     <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
                     <el-button style="margin-left: 10px;" size="small" type="success"
@@ -45,11 +46,12 @@
     </el-container>
 </div>
 </body>
+<script type="text/javascript" src="/index/js/lib/spark-md5.min.js"></script>
+<script type="text/javascript" src="/index/js/lib/axios.min.js"></script>
 <!-- import Vue before Element -->
-<script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+<script type="text/javascript" src="/index/js/lib/vue.min.js"></script>
 <!-- import JavaScript -->
 <script src="https://unpkg.com/element-ui/lib/index.js"></script>
-<script src="https://unpkg.com/axios@1.1.2/dist/axios.min.js"></script>
 <script type="text/javascript" src="/index/js/md5.js"></script>
 <script type="text/javascript" src="/index/js/tool.js"></script>
 <script type="text/javascript" src="/index/js/uploadFile.js"></script>

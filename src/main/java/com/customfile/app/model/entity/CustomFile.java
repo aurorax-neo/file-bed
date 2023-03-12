@@ -37,6 +37,9 @@ public class CustomFile implements Serializable {
     private Long segmentSize;
     private Integer segmentTotal;
     private Date uploadDate;
+    private Integer isMerge;
+    private Integer isST;
+    private String fileMD5;
     private String fileKey;
     @TableLogic
     private Integer isDelete;

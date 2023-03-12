@@ -19,8 +19,10 @@ public class CustomFileUploadSegmentFileRequest implements Serializable {
 
     private MultipartFile segmentFile;
     private String fileName;
+    private Long fileSize;
     private Integer segmentIndex;
     private Long segmentSize;
     private Integer segmentTotal;
     private String key;
+    private String MD5;
 }

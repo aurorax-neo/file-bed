@@ -1,6 +1,6 @@
 spring:
   application:
-    name: Drawing bed
+    name: file bed
   profiles:
     active: prod
   servlet:

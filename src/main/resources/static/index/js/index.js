@@ -32,19 +32,21 @@ new Vue({
                     fileName: data['fileName'],
                     fileUrl: data['fileUrl'],
                 }
+                this.$refs.upload.clearFiles();
                 this.$data.tableData.push(temp);
+                this.$notify({
+                    title: '成功',
+                    message: '上传成功',
+                    type: 'success'
+                });
             });
         },
         copyFileUrl(row) {
-            const oInput = document.createElement('input');
-            oInput.value = row['fileUrl'];
-            document.body.appendChild(oInput);
-            oInput.select(); // 选择对象;
-            document.execCommand("Copy"); // 执行浏览器复制命令
-            oInput.remove()
-            this.$message({
-                message: '复制成功',
-                type: 'success'
+            navigator.clipboard.writeText(row['fileUrl']).then(() => {
+                this.$message({
+                    message: '复制成功',
+                    type: 'success'
+                });
             });
         }
     },
