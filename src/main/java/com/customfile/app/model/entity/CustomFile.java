@@ -29,7 +29,7 @@ public class CustomFile implements Serializable {
     private static final long serialVersionUID = -1145039356017772808L;
 
     @TableId
-    private Long id;
+    private String id;
     private String fileName;
     private Long fileSize;
     private String filePath;
