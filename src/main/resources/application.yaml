@@ -22,5 +22,6 @@ mybatis-plus:
     # 驼峰
     map-underscore-to-camel-case: false
 
-file:
-  save-path: D:/file/
+#上传文件位置，默认为服务app目录
+#file:
+#  save-path: D:\file\

@@ -19,7 +19,7 @@ import java.sql.Date;
  * @author YCJ
  * @date 2023/03/08
  */
-@TableName("SegmentFile")
+@TableName("customFile")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

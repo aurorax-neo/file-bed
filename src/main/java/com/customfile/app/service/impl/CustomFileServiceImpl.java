@@ -173,7 +173,7 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
 
         // 如果已上传
         if (segmentIndex <= customFile.getSegmentIndex()) {
-            return false;
+            throw new BusinessException(StateCode.SYSTEM_ERROR, "该分片文件已上传");
         }
         // 如果未上传
         String segmentName = FileUtil.getSegmentName(fileName, fileKey, segmentIndex);
@@ -210,7 +210,7 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
             // 整合结果文件
             File newFile = new File(filePath);
             if (!newFile.getParentFile().exists()) {
-                boolean b = newFile.getParentFile().mkdir();
+                boolean b = newFile.getParentFile().mkdirs();
                 if (!b) {
                     return false;
                 }
@@ -259,7 +259,7 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
         File dest = new File(filePath);
         //判断文件父目录是否存在
         if (!dest.getParentFile().exists()) {
-            boolean b = dest.getParentFile().mkdir();
+            boolean b = dest.getParentFile().mkdirs();
             if (!b) {
                 return false;
             }
