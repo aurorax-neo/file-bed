@@ -72,7 +72,7 @@
                     <target>14</target>
                     <encoding>UTF-8</encoding>
                     <compilerArguments>
-                        <extdirs>${project.basedir}/src/main/resources/lib</extdirs>
+                        <extdirs>${project.basedir}/src/main/resources/lib/</extdirs>
                     </compilerArguments>
                 </configuration>
             </plugin>
