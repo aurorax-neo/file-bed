@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     public BaseResponse<Enum<StateCode>> businessExceptionHandler(BusinessException e) {
-//        log.error("\nstart: \nClass->GlobalExceptionHandler: \nBusinessException: " + e.getMessage() + "\nend.");
+        log.error("\nstart: \nClass->GlobalExceptionHandler: \nBusinessException: " + e.getMessage() + "\nend.");
         return ResultUtils.error(e.getCode(), e.getMessage());
     }
 
@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public BaseResponse<?> runtimeExceptionHandler(RuntimeException e) {
-//        log.error("\nstart: \nClass->GlobalExceptionHandler: \nRuntimeException: " + e.getMessage() + "\nend.");
+        log.error("\nstart: \nClass->GlobalExceptionHandler: \nRuntimeException: " + e.getMessage() + "\nend.");
         return ResultUtils.error(StateCode.SYSTEM_ERROR);
     }
 

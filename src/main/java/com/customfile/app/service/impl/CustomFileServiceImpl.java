@@ -151,6 +151,7 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
             customFile.setIsST(0);
             customFile.setFileKey(key);
             customFile.setFileMD5(fileMD5);
+            customFile.setIsDelete(0);
             return customFileMapper.insert(customFile) > 0;
         }
     }

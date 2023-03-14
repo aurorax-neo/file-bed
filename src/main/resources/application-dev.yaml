@@ -4,11 +4,10 @@ spring:
   datasource:
     druid:
       name: filebed
-      url: jdbc:mariadb://localhost:3306/filebed
-      username: root
+      url: jdbc:oracle:thin:@127.0.0.1:1521/xe
+      username: C##FILEBED
       password: root
       testWhileIdle: true
-      validationQuery: SELECT 1
 mybatis-plus:
   configuration:
     # 日志

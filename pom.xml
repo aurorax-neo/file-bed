@@ -25,11 +25,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.mariadb.jdbc</groupId>
-            <artifactId>mariadb-java-client</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
@@ -76,6 +71,9 @@
                     <source>14</source>
                     <target>14</target>
                     <encoding>UTF-8</encoding>
+                    <compilerArguments>
+                        <extdirs>${project.basedir}/src/main/resources/lib</extdirs>
+                    </compilerArguments>
                 </configuration>
             </plugin>
             <plugin>
