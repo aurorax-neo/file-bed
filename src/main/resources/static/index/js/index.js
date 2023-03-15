@@ -42,11 +42,19 @@ new Vue({
             });
         },
         copyFileUrl(row) {
-            navigator.clipboard.writeText(row['fileUrl']).then(() => {
-                this.$message({
-                    message: '复制成功',
-                    type: 'success'
-                });
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(row['fileUrl']).then()
+            } else {
+                const oInput = document.createElement('input')
+                oInput.value = row['fileUrl'];
+                document.body.appendChild(oInput)
+                oInput.select() // 选择对象
+                document.execCommand("Copy") // 执行浏览器复制命令
+                oInput.remove()
+            }
+            this.$message({
+                message: '复制成功',
+                type: 'success'
             });
         }
     },
