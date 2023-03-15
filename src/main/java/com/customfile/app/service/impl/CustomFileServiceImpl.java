@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.sql.Date;
 
 
 /**
@@ -139,6 +140,8 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
         //文件重命名（含后缀）
         String completeFileName = FileUtil.getFileNameWithSuffix(key, suffix);
 
+        Date curDate = new Date(System.currentTimeMillis());
+
         synchronized (key.intern()) {
             CustomFile customFile = new CustomFile();
             customFile.setFileName(fileName);
@@ -151,6 +154,7 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
             customFile.setIsST(0);
             customFile.setFileKey(key);
             customFile.setFileMD5(fileMD5);
+            customFile.setUploadDate(curDate);
             customFile.setIsDelete(0);
             return customFileMapper.insert(customFile) > 0;
         }
