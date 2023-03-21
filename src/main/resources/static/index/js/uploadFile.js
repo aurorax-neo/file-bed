@@ -77,24 +77,23 @@ async function uploadFile(file, callback) {
 
     const key = getFileKey(file)
 
-    // axios请求找下数据库中该文件是否存在
-    let data = await checkFile(file);
     // 分片大小
     const segmentSize = 2 * 1024 * 1024;  // 先2MB用着
-    // 默认分片索引为1
+    // 默认分片索引
     let segmentIndex = 0;
     // 获取文件总分片数
     const segmentTotal = getTotalSegmentCount(file, segmentSize);
 
-    // 如果存在，获取上传状态
+    // axios请求找下数据库中该文件是否存在
+    let data = await checkFile(file);
+    // 如果存在
     if (data) {
+        // 如果上传已完成，直接返回
+        if (data['isMerge'] === 1) {
+            callback(null, data);
+            return;
+        }
         segmentIndex = data['segmentIndex'];
-    }
-
-    // 如果上传已完成，直接返回
-    if (segmentIndex === segmentTotal) {
-        callback(null, data);
-        return;
     }
 
     // 如果上传未完成，继续上传
@@ -104,14 +103,13 @@ async function uploadFile(file, callback) {
         index += 1;
     }
     while (index <= segmentTotal) {
-        const data = await uploadSegmentFile(file, file.name, file.size, index, segmentTotal, segmentSize, key, md5);
-        index = data['segmentIndex'] + 1;
-        callback(null, data);
+        data = await uploadSegmentFile(file, file.name, file.size, index, segmentTotal, segmentSize, key, md5);
         if (!data) {
             return;
         }
+        index = data['segmentIndex'] + 1;
+        callback(null, data);
     }
-
 }
 
 

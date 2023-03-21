@@ -10,6 +10,9 @@ import com.customfile.app.common.utils.FileUtil;
 import com.customfile.app.mapper.CustomFileMapper;
 import com.customfile.app.model.entity.CustomFile;
 import com.customfile.app.service.CustomFileService;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import lombok.Synchronized;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -33,6 +37,11 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
     @Resource
     private CustomFileMapper customFileMapper;
 
+    private static final Cache<Object, Object> CACHE = CacheBuilder.newBuilder()
+            .maximumSize(1024)
+            .expireAfterAccess(5, TimeUnit.MINUTES)
+            .build();
+
     /**
      * 上传分片文件
      *
@@ -44,23 +53,28 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
      * @return {@link CustomFile}
      */
     @Override
+    @Synchronized
     public CustomFile upLoadCustomFile(HttpServletRequest httpServletRequest, String fileName, Long fileSize, MultipartFile segmentFile, Integer segmentIndex, Long segmentSize, Integer segmentTotal, String fileKey, String fileMD5) {
-
         // 存储路径
         final String savePath = PathConstant.getFileSavePath().concat(fileMD5).concat(File.separator);
-        // 查找是否存在，不存在添加在数据库
-        CustomFile customFile = this.getCustomFileByKey(fileKey);
-        if (customFile == null) {
-            boolean writeSuccess = this.createFile(fileName, fileSize, savePath, segmentSize, segmentTotal, fileKey, fileMD5);
-            if (!writeSuccess) {
-                // 写入失败，返回错误信息
-                throw new BusinessException(StateCode.SYSTEM_ERROR, "文件数据库记录创建失败");
-            }
+
+        if (CACHE.getIfPresent(fileKey + segmentIndex) != null) {
+            throw new BusinessException(StateCode.SYSTEM_ERROR, "请勿重复请求");
+        } else {
+            CACHE.put(fileKey + segmentIndex, 0);
         }
 
-        // 秒传
-        // 合并分片校验
+        // 秒传(0索引用来秒传校验)
         if (segmentIndex == 0) {
+            // 查找是否存在，不存在添加在数据库
+            CustomFile customFile = this.getCustomFileByKey(fileKey);
+            if (customFile == null) {
+                this.createFile(fileName, fileSize, savePath, segmentSize, segmentTotal, fileKey, fileMD5);
+            } else if (customFile.getIsMerge() > 0) {
+                return customFile;
+            } else if (customFile.getIsMerge().equals(0) && customFile.getSegmentIndex().equals(customFile.getSegmentTotal())) {
+                this.mergeSegment(fileName, savePath, segmentTotal, savePath, fileKey);
+            }
             // 查询是否存在非秒传文件记录
             LambdaQueryWrapper<CustomFile> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.select(CustomFile::getFilePath, CustomFile::getSegmentIndex, CustomFile::getSegmentTotal)
@@ -79,31 +93,22 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
                         .eq(true, CustomFile::getFileKey, fileKey);
                 customFileMapper.update(new CustomFile(), updateWrapper);
             }
-            customFile = this.getCustomFileByKey(fileKey);
-            if (customFile.getIsMerge().equals(0) && customFile.getSegmentIndex().equals(customFile.getSegmentTotal())) {
-                this.mergeSegment(fileName, savePath, segmentTotal, savePath, fileKey);
-            }
-            return customFile;
+            return this.getCustomFileByKey(fileKey);
         }
 
         // 将当前分片存入
-        boolean isSegmentSaveSuccess = this.saveSegment(fileName, segmentFile, segmentIndex, savePath, fileKey);
-        if (!isSegmentSaveSuccess) {
-            // 分片存储失败
-            throw new BusinessException(StateCode.SYSTEM_ERROR, "分片文件存储失败");
-        }
+        this.saveSegment(fileName, segmentFile, segmentIndex, savePath, fileKey);
 
+        // 分片上传完成，合并和删除分片
         if (segmentIndex.equals(segmentTotal)) {
             // 合并分片
-            boolean mergeSuccess = this.mergeSegment(fileName, savePath, segmentTotal, savePath, fileKey);
-            if (!mergeSuccess) {
-                throw new BusinessException(StateCode.SYSTEM_ERROR, "文件分片合并失败");
-            }
+            this.mergeSegment(fileName, savePath, segmentTotal, savePath, fileKey);
             // 更新合并状态
             LambdaUpdateWrapper<CustomFile> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.set(true, CustomFile::getIsMerge, 1)
                     .eq(true, CustomFile::getFileKey, fileKey);
             customFileMapper.update(new CustomFile(), updateWrapper);
+
             // 另开线程去自旋删除
             DeleteSegments deleteSegments = new DeleteSegments(fileName, fileKey, savePath, segmentTotal);
             deleteSegments.start();
@@ -130,9 +135,8 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
      * @param path        保存路径
      * @param segmentSize 段大小
      * @param key         md5关键
-     * @return boolean
      */
-    private boolean createFile(String fileName, Long fileSize, String path, Long segmentSize, Integer segmentTotal, String key, String fileMD5) {
+    private void createFile(String fileName, Long fileSize, String path, Long segmentSize, Integer segmentTotal, String key, String fileMD5) {
 
         //文件后缀
         String suffix = FileUtil.getFileSuffix(fileName);
@@ -152,7 +156,12 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
             customFile.setFileKey(key);
             customFile.setFileMD5(fileMD5);
             customFile.setIsDelete(0);
-            return customFileMapper.insert(customFile) > 0;
+
+            boolean isSuccess = customFileMapper.insert(customFile) > 0;
+            if (!isSuccess) {
+                // 写入失败，返回错误信息
+                throw new BusinessException(StateCode.SYSTEM_ERROR, "文件数据库记录创建失败");
+            }
         }
     }
 
@@ -162,43 +171,24 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
      * @param file     文件
      * @param filePath 保存路径
      * @param fileKey  关键
-     * @return boolean
      */
-    private boolean saveSegment(String fileName, MultipartFile file, Integer segmentIndex, String filePath, String fileKey) {
-
-        LambdaQueryWrapper<CustomFile> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.select(CustomFile::getSegmentIndex)
-                .eq(fileKey != null, CustomFile::getFileKey, fileKey);
-        CustomFile customFile = customFileMapper.selectOne(queryWrapper);
-        // 存储分片;
-
-        // 如果已上传
-        if (segmentIndex <= customFile.getSegmentIndex()) {
-            throw new BusinessException(StateCode.SYSTEM_ERROR, "该分片文件已上传");
-        }
-        // 如果未上传
+    private void saveSegment(String fileName, MultipartFile file, Integer segmentIndex, String filePath, String fileKey) {
         String segmentName = FileUtil.getSegmentName(fileName, fileKey, segmentIndex);
-        boolean saveSuccess = saveFile(file, filePath.concat(segmentName));
-        if (saveSuccess) {
-            // 更新分片索引
-            LambdaUpdateWrapper<CustomFile> updateWrapper = new LambdaUpdateWrapper<>();
-            updateWrapper.set(segmentIndex > 0, CustomFile::getSegmentIndex, segmentIndex)
-                    .eq(fileKey != null, CustomFile::getFileKey, fileKey);
-            int row = customFileMapper.update(new CustomFile(), updateWrapper);
-            if (row <= 0) {
-                throw new BusinessException(StateCode.SYSTEM_ERROR, "分片索引更新失败");
-            }
-            return true;
+        this.saveFile(file, filePath.concat(segmentName));
+        // 更新分片索引
+        LambdaUpdateWrapper<CustomFile> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.set(segmentIndex > 0, CustomFile::getSegmentIndex, segmentIndex)
+                .eq(fileKey != null, CustomFile::getFileKey, fileKey);
+        int row = customFileMapper.update(new CustomFile(), updateWrapper);
+        if (row <= 0) {
+            throw new BusinessException(StateCode.SYSTEM_ERROR, "分片索引更新失败");
         }
-        return false;
     }
 
     /**
      * 合并分片
-     *
-     * @return boolean
      */
-    private boolean mergeSegment(String fileName, String segmentPath, int segmentTotal, String filePath, String fileKey) {
+    private void mergeSegment(String fileName, String segmentPath, int segmentTotal, String filePath, String fileKey) {
 
         boolean debug = false;
 
@@ -211,9 +201,8 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
             // 整合结果文件
             File newFile = new File(filePath);
             if (!newFile.getParentFile().exists()) {
-                boolean b = newFile.getParentFile().mkdirs();
-                if (!b) {
-                    return false;
+                if (!newFile.getParentFile().mkdirs()) {
+                    throw new BusinessException(StateCode.SYSTEM_ERROR, "文件夹创建失败");
                 }
             }
             outputStream = new FileOutputStream(newFile, true);
@@ -229,7 +218,7 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
         } catch (IOException e) {
             if (debug) System.out.println("分片合并异常");
             e.printStackTrace();
-            return false;
+            throw new BusinessException(StateCode.SYSTEM_ERROR, "文件分片合并失败");
         } finally {
             try {
                 if (fileInputStream != null) {
@@ -245,7 +234,6 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
             }
         }
         if (debug) System.out.println("分片合并成功");
-        return true;
     }
 
 
@@ -254,24 +242,23 @@ public class CustomFileServiceImpl extends ServiceImpl<CustomFileMapper, CustomF
      *
      * @param file     文件
      * @param filePath 路径
-     * @return boolean
      */
-    private boolean saveFile(MultipartFile file, String filePath) {
+    private void saveFile(MultipartFile file, String filePath) {
         File dest = new File(filePath);
         //判断文件父目录是否存在
         if (!dest.getParentFile().exists()) {
-            boolean b = dest.getParentFile().mkdirs();
-            if (!b) {
-                return false;
+            if (!dest.getParentFile().mkdirs()) {
+                // 文件夹创建失败
+                throw new BusinessException(StateCode.SYSTEM_ERROR, dest.getParentFile() + "文件夹创建失败");
             }
         }
         //保存文件
         try {
             file.transferTo(dest);
-            return true;
         } catch (Exception e) {
             e.printStackTrace();
-            return false;
+            // 文件存储失败
+            throw new BusinessException(StateCode.SYSTEM_ERROR, "分片文件存储失败");
         }
     }
 }
